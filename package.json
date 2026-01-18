@@ -1,7 +1,7 @@
 {
     "name": "template-vimcord",
     "version": "1.0.0",
-    "author": "",
+    "author": "xsqu1znt",
     "main": "dist/index.js",
     "license": "MIT",
     "private": true,
@@ -9,7 +9,7 @@
     "scripts": {
         "start": "node dist/index.js",
         "dev": "nodemon --exec \"tsx src/index.ts --dev\" -w src -w config -e \"json ts\"",
-        "build": "rm -rf dist && tsc && tsc-alias",
+        "build": "tsc && tsc-alias",
         "check": "tsc --noEmit",
         "format": "prettier --write \"./**/*.{ts,json}\""
     },
