@@ -21,8 +21,8 @@ importers:
         specifier: ^1.0.35
         version: 1.0.35
       vimcord:
-        specifier: ^1.0.28
-        version: 1.0.28(discord.js@14.25.1)(mongoose@9.1.5)
+        specifier: ^1.0.30
+        version: 1.0.30(discord.js@14.25.1)(mongoose@9.1.5)
     devDependencies:
       '@types/node':
         specifier: ^25.0.9
@@ -505,6 +505,9 @@ packages:
   lodash@4.17.21:
     resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==}
 
+  lodash@4.17.23:
+    resolution: {integrity: sha512-LgVTMpQtIopCi79SJeDiP0TfWi5CNEc/L/aRdTh3yIvmZXTnheWpKjSZhnvMl8iXbC1tFg9gdHHDMLoV7CnG+w==}
+
   magic-bytes.js@1.13.0:
     resolution: {integrity: sha512-afO2mnxW7GDTXMm5/AoN1WuOcdoKhtgXjIvHmobqTD1grNplhGdv3PFOyjCVmrnOZBIT/gD/koDKpYG+0mvHcg==}
 
@@ -730,8 +733,8 @@ packages:
     resolution: {integrity: sha512-gBLkYIlEnSp8pFbT64yFgGE6UIB9tAkhukC23PmMDCe5Nd+cRqKxSjw5y54MK2AZMgZfJWMaNE4nYUHgi1XEOw==}
     engines: {node: '>=18.17'}
 
-  vimcord@1.0.28:
-    resolution: {integrity: sha512-aHIqogRzhe0UxrhSAPppikSmvPYeJfbBpuzbQ06eE5+nYSCJpQK9tweRiM64Ych7vTnpEUkxwNknC37JWfveXw==}
+  vimcord@1.0.30:
+    resolution: {integrity: sha512-83TD3anuJIJW5A2M6jpWbFHQFk/QWL6ETSoYqE+AXWteSwgVsfG/iAydOoCshVeo08OS91alHbDPMFqoDWnhRQ==}
     peerDependencies:
       discord.js: ^14.0.0
       mongoose: ^8.0.0
@@ -1192,6 +1195,8 @@ snapshots:
 
   lodash@4.17.21: {}
 
+  lodash@4.17.23: {}
+
   magic-bytes.js@1.13.0: {}
 
   math-intrinsics@1.1.0: {}
@@ -1371,13 +1376,13 @@ snapshots:
 
   undici@6.21.3: {}
 
-  vimcord@1.0.28(discord.js@14.25.1)(mongoose@9.1.5):
+  vimcord@1.0.30(discord.js@14.25.1)(mongoose@9.1.5):
     dependencies:
       axios: 1.13.2
       chalk: 4.1.2
       discord.js: 14.25.1
       dotenv: 16.6.1
-      lodash: 4.17.21
+      lodash: 4.17.23
       node-cron: 4.2.1
       qznt: 1.0.35
       type-fest: 4.41.0
