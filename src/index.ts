@@ -1,3 +1,6 @@
+import dotEnv from "dotenv";
+dotEnv.config({ quiet: true });
+
 import { ActivityType, ClientOptions, GatewayIntentBits } from "discord.js";
 import {
     createClient,
