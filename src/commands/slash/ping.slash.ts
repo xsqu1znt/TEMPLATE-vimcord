@@ -1,17 +1,15 @@
-import { InteractionContextType } from "discord.js";
-import { SlashCommandBuilder } from "vimcord";
+import { InteractionContextType, SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder as VimcordSlashCommandBuilder } from "vimcord";
 
-export default new SlashCommandBuilder({
-    builder: builder =>
-        builder
-            .setName("ping")
-            .setDescription("Check how fast the bot is right now. (less ms = faster)")
-            .setContexts(InteractionContextType.Guild),
+export default new VimcordSlashCommandBuilder({
+    builder: new SlashCommandBuilder()
+        .setName("ping")
+        .setDescription("Check how fast the bot is right now. (less ms = faster)")
+        .setContexts(InteractionContextType.Guild),
 
     metadata: { category: "General/App" },
 
     async execute(client, interaction) {
-        // Reply to the interaction
         interaction.reply({ content: `Client: **${client.ws.ping}ms**` });
     }
 });
