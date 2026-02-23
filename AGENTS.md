@@ -1,252 +1,375 @@
-# AGENTS.md - Agent Coding Guidelines for TEMPLATE-vimcord
+# AGENTS.md — Vimcord Bot Project
+
+> **For AI agents:** This file is your primary source of truth for this project. Read it in full before writing a single line of code. It is a living document — update the [Project Registry](#project-registry) and [Project-Specific Notes](#project-specific-notes) sections as the project evolves.
 
 ---
 
-## Project Overview
+## Agent Orientation
 
-This is a Discord bot template using TypeScript, Vimcord framework, and MongoDB. The bot uses slash commands, prefix commands, and event handlers.
+This project is a Discord bot built with **TypeScript + Vimcord** (a discord.js v14 wrapper) and **MongoDB** via Mongoose.
 
-Keep this up-to-date with any new structural changes or new project specific guidelines.
-For deep-dive patterns and API references beyond what this file covers, see [DOCS.md](./DOCS.md).
-For more information on API usage, look up documentation online for the following packages: discord.js, MongoDB, mongoose.
+Before working on any task:
 
----
+1. **Read this file completely**
+2. **Read `.skills/vimcord/SKILL.md`** — then load the relevant `.skills/vimcord/` reference file for your task domain before writing any code
+3. **Explore the codebase** — run `find src -type f | sort` to understand what already exists before adding anything
+4. **Check the registry below** — schemas, commands, and utilities already in the project are listed there
 
-## Build & Development Commands
-
-### Development
-
-```bash
-pnpm run dev    # Start development server with hot reload (nodemon + tsx)
-```
-
-### Build
-
-```bash
-pnpm run build    # Compile TypeScript with tsc and tsc-alias
-pnpm run check    # Type-check without emitting (tsc --noEmit)
-pnpm run start    # Run compiled JavaScript from dist/
-```
-
-### Formatting
-
-```bash
-pnpm run format   # Format all .ts and .json files with Prettier
-```
-
-### Testing
-
-No test framework is currently configured. To add one, install Jest or Vitest, then add and document your test command here (e.g., `pnpm run test`).
+For discord.js v14 or Mongoose specifics not covered by the skill, look up their official documentation online.
 
 ---
 
-## Code Style Guidelines
+## Workflow: How to Approach a Task
 
-### Formatting (Prettier)
+### Before Writing Code
 
-- **Tab width:** 4 spaces
-- **Print width:** 125 characters
-- **Trailing commas:** None
-- **Arrow parens:** Avoid (prefer `x => x` over `(x) => x`)
-- **Quotes:** Double quotes
-- **Semicolons:** Required
-- **Line endings:** LF
-
-### TypeScript Configuration
-
-The project uses strict TypeScript:
-
-- `strict: true` - Full strict mode enabled
-- `noImplicitAny: true` - No implicit `any` types
-- `strictNullChecks: true` - Null/undefined must be explicitly handled
-- `noUncheckedIndexedAccess: true` - Array access returns `T | undefined`
-- `noFallthroughCasesInSwitch: true` - All switch cases must break/return
-- `moduleDetection: force` - Each file is treated as a module
-
-### Import Order
-
-Always follow this order:
-
-1. Node built-ins (e.g., `import { randomUUID } from "node:crypto"`)
-2. Third-party packages (e.g., `import { PermissionFlagsBits } from "discord.js"`)
-3. Local modules (e.g., `import { UserSchema } from "@/schemas/user.schema"`)
-
-### Imports & Path Aliases
-
-**Always prefer path aliases over relative imports:**
-
-```typescript
-// Good - use aliases
-import { GuildSchema } from "@db/index";
-import { SlashCommandBuilder } from "vimcord";
-import { EMOJIS } from "@/constants";
-
-// Bad - avoid relative paths
-import { GuildSchema } from "../../db";
-import { SomeUtil } from "../../../utils/some.util";
+```
+1. Read this AGENTS.md fully
+2. Read docs/vimcord/SKILL.md + the relevant reference file for your task
+3. Run: find src -type f | sort
+4. Read any existing files relevant to your task
+5. Identify what exists vs. what needs to be built
+6. Plan every file you'll create or modify before starting
 ```
 
-**Available aliases:**
+### While Writing Code
 
-- `@/*` - Source root (`./src/*`)
-- `@commands/*` - Commands (`./src/commands/*`)
-- `@slashCommands/*` - Slash commands (`./src/commands/slash/*`)
-- `@prefixCommands/*` - Prefix commands (`./src/commands/prefix/*`)
-- `@contextCommands/*` - Context menu commands (`./src/commands/context/*`)
-- `@events/*` - Event handlers (`./src/events/*`)
-- `@jobs/*` - Scheduled jobs (`./src/jobs/*`)
-- `@db/*` - Database schemas (`./src/db/*`) — always include the subpath, e.g. `@db/index`
-- `@features/*` - Planned out feature classes (`./src/features/*`)
-- `@utils/*` - Utility functions (`./src/utils/*`)
-- `@constants/*` - Constants (`./src/constants/*`)
-- `@ctypes/*` - Custom types (`./src/types/*`)
-
-### Naming Conventions
-
-- **Files:** Use kebab-case: `ping.slash.ts`, `ready.hello.event.ts`
-- **Commands:** Lowercase, use dots for namespacing: `ping`, `moderator.ban`
-- **Events:** Use dot notation with category: `ready.Hello`, `messageCreate.Moderation`
-- **Classes/Types:** PascalCase
-- **Variables/Functions:** camelCase
-- **Constants:** SCREAMING_SNAKE_CASE
-
-### Type Safety
-
-- **Never use `any`** - Use `unknown` with type guards only when necessary instead
-- **Use explicit return types** for functions
-
-### Function Signatures
-
-```typescript
-// Good
-async function getUserData(userId: string): Promise<UserData | null> {
-    return await UserSchema.fetch({ userId });
-}
-
-// Bad (relying on inference)
-async function getUserData(userId: string) {
-    return await UserSchema.fetch({ userId });
-}
+```
+- Write all files for a feature together, not one at a time
+- If a schema is needed, write it first — commands depend on schemas, not the reverse
+- If a utility is shared across files, write it first
+- Run `pnpm run check` after each file to catch type errors early
+- Barrel-export any new schema immediately in src/db/index.ts
 ```
 
-### Error Handling
+### After Writing Code
 
-- Use Vimcord's built-in global error handlers: `useGlobalErrorHandlers: true`
-- Wrap all async operations in try/catch
-- Prefer async/await over `.then()` chains
-- Always handle potential `null`/`undefined` values (strictNullChecks enabled)
-- Use optional chaining `?.` when accessing potentially undefined properties
+```
+- Run `pnpm run check` — fix ALL type errors before finishing
+- Run `pnpm run format` — formatting is not optional
+- Update the Project Registry below with any new schemas, commands, or utilities
+- Update Project-Specific Notes if you introduced a new pattern or convention
+```
 
-### Logging
+### One-Shotting a Full Bot (Scaffolding from Scratch)
 
-Use `console.log` for general logging — Vimcord intercepts and formats these in production. Use `console.warn` and `console.error` for degraded states and errors respectively. Do not introduce a third-party logger unless the project explicitly adopts one and documents it here.
+When asked to build a new bot or a full feature set from a prompt:
 
-### General Guidelines
+1. Read `.skills/vimcord/scaffolding.md`
+2. Stand up the full file structure first (tsconfig, package.json, bot.ts, index.ts, constants)
+3. Build schemas before commands
+4. Build in dependency order: utilities → schemas → command handlers → route files → events
+5. Run `pnpm run check` — fix everything
+6. Run `pnpm run format`
 
-1. **No comments** unless explaining complex business logic
-2. **Always use semicolons**
-3. **Use `const` over `let`**, avoid `var`
-4. **Export default** for command/event files
-5. **Use `async/await`** for all asynchronous operations
-6. **One command per file**
-7. **Extract shared logic into utilities**
+---
+
+## Build & Dev Commands
+
+| Command           | Description                                            |
+| ----------------- | ------------------------------------------------------ |
+| `pnpm run dev`    | Dev server with hot reload (nodemon + tsx)             |
+| `pnpm run build`  | Compile TypeScript (tsc + tsc-alias)                   |
+| `pnpm run check`  | Type-check without emitting — **run after every file** |
+| `pnpm run start`  | Run compiled output from `dist/`                       |
+| `pnpm run format` | Format all `.ts` and `.json` with Prettier             |
+
+> **Always run `pnpm run check` before declaring a task complete. Zero type errors is the bar.**
+
+---
+
+## Non-Negotiable Code Rules
+
+| Rule                     | Detail                                                  |
+| ------------------------ | ------------------------------------------------------- |
+| No `any`                 | Use `unknown` with type guards, or proper generics      |
+| Explicit return types    | Every function: `async function foo(): Promise<void>`   |
+| Path aliases only        | Never use relative imports (`../../`) — see alias table |
+| `export default`         | All command and event files                             |
+| `deferReply: true`       | Any command that hits DB or takes > 1s                  |
+| `editReply` after defer  | Never `reply` on a deferred interaction                 |
+| `async/await` everywhere | Never `.then()` chains                                  |
+| Semicolons               | Every statement                                         |
+| No hardcoded secrets     | Tokens, IDs, URIs always from env or constants          |
+| One command per file     | No exceptions                                           |
+| `const` over `let`       | Never `var`                                             |
+| No comments              | Unless explaining non-obvious business logic            |
+| Barrel exports           | New schemas go in `src/db/index.ts` immediately         |
+
+---
+
+## Path Aliases
+
+| Alias                | Resolves To                                        |
+| -------------------- | -------------------------------------------------- |
+| `@/*`                | `./src/*`                                          |
+| `@commands/*`        | `./src/commands/*`                                 |
+| `@slashCommands/*`   | `./src/commands/slash/*`                           |
+| `@prefixCommands/*`  | `./src/commands/prefix/*`                          |
+| `@contextCommands/*` | `./src/commands/context/*`                         |
+| `@events/*`          | `./src/events/*`                                   |
+| `@jobs/*`            | `./src/jobs/*`                                     |
+| `@db/*`              | `./src/db/*` — always include subpath: `@db/index` |
+| `@features/*`        | `./src/features/*`                                 |
+| `@utils/*`           | `./src/utils/*`                                    |
+| `@constants/*`       | `./src/constants/*`                                |
+| `@ctypes/*`          | `./src/types/*`                                    |
+
+---
+
+## Code Style
+
+**Prettier:** 4-space tabs · 125 char line width · double quotes · semicolons · no trailing commas · LF endings · arrow parens avoided (`x => x` not `(x) => x`)
+
+**Import order:**
+
+1. Node built-ins (`import { randomUUID } from "node:crypto"`)
+2. Third-party packages (`import { PermissionFlagsBits } from "discord.js"`)
+3. Local modules (`import { UserSchema } from "@db/index"`)
+
+**Naming:**
+
+- Files: `kebab-case` with type suffix — `ping.slash.ts`, `user.schema.ts`, `ready.hello.event.ts`
+- Commands: lowercase dot-namespaced — `ping`, `moderator.ban`
+- Events: dot-notation — `messageCreate.AutoMod`, `ready.Hello`
+- Classes/Types: `PascalCase`
+- Variables/Functions: `camelCase`
+- Constants: `SCREAMING_SNAKE_CASE`
 
 ---
 
 ## Project Structure
 
 ```
-constants/                    # Static JSON configuration (outside src for hot reloading)
-├── config.json               # JSON files imported into src/constants.ts
-src/
-├── index.ts                  # Bot entry point (client creation, configuration, start)
-├── constants.ts              # Re-exports constants from ../constants/*.json
-├── db/
-│   ├── index.ts              # Database schema exports (barrel file)
-│   └── schemas/              # Mongoose schemas (*.schema.ts)
-├── commands/
-│   ├── slash/                # Slash commands (*.slash.ts)
-│   ├── prefix/               # Prefix commands (*.prefix.ts)
-│   └── context/              # Context menu commands (*.ctx.ts)
-├── events/                   # Event handlers (*.event.ts)
-├── jobs/                     # Scheduled jobs
-├── features/                 # Feature classes (complex business logic)
-├── utils/                    # Utility functions
-└── types/                    # TypeScript type definitions
+[PROJECT_NAME]/
+├── .skills/
+│   └── vimcord/                # Vimcord framework reference (do not edit)
+│       ├── SKILL.md            # Start here — rules + reference map
+│       ├── commands.md
+│       ├── database.md
+│       ├── events.md
+│       ├── ui.md
+│       ├── client.md
+│       ├── jobs.md
+│       ├── features.md
+│       ├── migration.md
+│       └── scaffolding.md
+├── constants/                  # JSON config — hot reloads without rebuild
+│   └── config.json
+├── src/
+│   ├── index.ts                # Entry point
+│   ├── bot.ts                  # Bot factory (createClient)
+│   ├── constants.ts            # Re-exports from ../constants/*.json
+│   ├── commands/
+│   │   ├── slash/              # *.slash.ts
+│   │   ├── prefix/             # *.prefix.ts
+│   │   └── context/            # *.ctx.ts
+│   ├── events/
+│   │   ├── interaction/        # Button/autocomplete collectors
+│   │   ├── intervals/          # Periodic polling
+│   │   ├── presence/           # Presence updates
+│   │   └── state/              # Client lifecycle
+│   ├── jobs/                   # Cron jobs (*.job.ts + _BaseCronJob.ts + index.ts)
+│   ├── features/               # Complex business logic classes
+│   ├── db/
+│   │   ├── index.ts            # Schema barrel exports
+│   │   └── schemas/            # *.schema.ts
+│   ├── utils/                  # Shared utility functions
+│   └── types/                  # TypeScript type definitions
+├── AGENTS.md
+├── .env
+├── .env.example
+├── tsconfig.json
+└── package.json
 ```
 
-### About the constants/ Directory
+**`constants/` is outside `src/`** intentionally — JSON files here hot-reload in dev without a rebuild. Use for colors, IDs, messages, and any config that changes frequently.
 
-Static JSON configuration files are placed in `constants/` (outside `src/`) for **hot reloading without rebuilding**:
+To add new constants:
 
-- During development (`pnpm run dev`), changes to JSON files in `constants/` are picked up automatically by tsx
-- This is ideal for configuration that changes frequently (colors, messages, IDs, etc.)
-- No need to rebuild the project when updating these files
-
-**To add new constants:**
-
-1. Create a new JSON file in `constants/` (e.g., `constants/emojis.json`)
-2. Import and re-export it in `src/constants.ts`:
-
-```typescript
-// src/constants.ts
-import _emojis from "../constants/emojis.json";
-export const EMOJIS = _emojis;
-```
-
-3. Import the constant where needed:
-
-```typescript
-import { EMOJIS } from "@/constants";
-```
-
-### About the events/ Directory
-
-Events can be organized by type in subdirectories for better discoverability:
-
-| Subdirectory   | Purpose                         | Example                          |
-| -------------- | ------------------------------- | -------------------------------- |
-| `interaction/` | Autocomplete, button collectors | `autocomplete.cards.event.ts`    |
-| `intervals/`   | Periodic polling/checks         | `interval.autoReminder.event.ts` |
-| `presence/`    | User presence updates           | `presence.vanity.event.ts`       |
-| `state/`       | Client lifecycle events         | `state.restarted.event.ts`       |
-
-### About the jobs/ Directory
-
-Scheduled jobs use cron patterns for recurring tasks:
-
-- `_BaseCronJob.ts` - Abstract base class with singleton pattern
-- `*.job.ts` - Individual job implementations
-- `index.ts` - Initialization function called on client ready
-
-```typescript
-// Example job implementation
-export class Backups extends _BaseCronJob {
-    constructor() {
-        super("0 0 */6 * * *", false); // Every 6 hours
-    }
-
-    async execute(): Promise<void> {
-        // Job logic here
-    }
-}
-```
-
-### About the features/ Directory
-
-Feature classes encapsulate complex business logic that spans multiple commands. Use feature classes when:
-
-- Logic is shared across multiple commands
-- State needs to be maintained during an operation
-- Business rules are complex and deserve their own test suite
+1. Create `constants/myconfig.json`
+2. Import and re-export in `src/constants.ts`: `export const MY_CONFIG = _myconfig;`
+3. Use via `import { MY_CONFIG } from "@/constants";`
 
 ---
 
-## Quick Reference
+## Vimcord Reference Map
 
-### Creating a Slash Command
+Read `.skills/vimcord/SKILL.md` first on every task, then load only the file you need:
 
-Key points: use builder function pattern, set `metadata.category`, use `deferReply` for longer operations.
+| Task Domain                                      | File                             |
+| ------------------------------------------------ | -------------------------------- |
+| Scaffolding a new bot                            | `.skills/vimcord/scaffolding.md` |
+| Slash / prefix / context commands                | `.skills/vimcord/commands.md`    |
+| Events, conditions, priorities                   | `.skills/vimcord/events.md`      |
+| MongoDB schemas, CRUD, transactions              | `.skills/vimcord/database.md`    |
+| BetterEmbed, Paginator, Prompt, Modal, Collector | `.skills/vimcord/ui.md`          |
+| Client config, status, logging, errors           | `.skills/vimcord/client.md`      |
+| Cron jobs                                        | `.skills/vimcord/jobs.md`        |
+| Feature classes                                  | `.skills/vimcord/features.md`    |
+| Migrating from plain discord.js                  | `.skills/vimcord/migration.md`   |
+
+---
+
+## Decision Heuristics
+
+**Should I use a feature class?**
+→ Yes if: logic spans 2+ commands, OR it's a stateful multi-step flow, OR the same DB operations appear in multiple places.
+→ No if: single-command, single-purpose.
+
+**Should I create a utility function?**
+→ Yes if: the same logic appears (or will appear) in 2+ files.
+→ No if: only used in one place — keep it local.
+
+**Should this go in `constants/` JSON vs. hardcoded?**
+→ JSON if: it could change without a deploy (colors, messages, channel IDs, role IDs).
+→ Hardcoded if: it's structural and will never change (enum values, algorithm constants).
+
+**Slash command, prefix command, or both?**
+→ Slash: all new user-facing features.
+→ Prefix: legacy support, staff/debug tooling, free-form argument parsing.
+→ Both: only when explicitly required.
+
+**Should I `deferReply`?**
+→ Yes: any DB call, any external API call, anything that could take > 1 second.
+→ No: pure synchronous responses (rare in practice).
+
+**Where does a new event file go?**
+→ `interaction/` — button/select/autocomplete collectors
+→ `intervals/` — periodic polling
+→ `presence/` — presence/activity tracking
+→ `state/` — ready, disconnect, error lifecycle events
+→ Root `events/` — everything else (messageCreate, guildMemberAdd, etc.)
+
+---
+
+## Anti-Slop Checklist
+
+Run through this before marking any task complete:
+
+- [ ] `pnpm run check` passes with zero errors
+- [ ] `pnpm run format` has been run
+- [ ] No `any` types anywhere in new or modified files
+- [ ] All functions have explicit return types
+- [ ] All imports use path aliases — no `../../` anywhere
+- [ ] `deferReply: true` on all commands touching async work
+- [ ] `editReply` used (not `reply`) on all deferred interactions
+- [ ] `export default` on all command/event files
+- [ ] No hardcoded tokens, IDs, or secrets
+- [ ] `null` and `undefined` always handled explicitly
+- [ ] Array access treated as `T | undefined` (`noUncheckedIndexedAccess`)
+- [ ] New schemas barrel-exported from `src/db/index.ts`
+- [ ] Project Registry below has been updated
+
+---
+
+## Project Registry
+
+> **Agent instruction:** Keep this section current. When you add a schema, command, utility, or establish a new convention, document it here. This is how future agents avoid duplicating work or contradicting existing patterns.
+
+### Bot Identity
+
+```
+Bot name:        [BOT_NAME]
+Description:     [WHAT THIS BOT DOES — 1-2 sentences]
+Command prefix:  [PREFIX e.g. ?]
+Staff guild ID:  [GUILD_ID or "not configured"]
+```
+
+### Environment Variables
+
+| Variable        | Required | Description             |
+| --------------- | -------- | ----------------------- |
+| `TOKEN`         | Yes      | Production bot token    |
+| `TOKEN_DEV`     | No       | Development bot token   |
+| `MONGO_URI`     | No       | Production MongoDB URI  |
+| `MONGO_URI_DEV` | No       | Development MongoDB URI |
+
+<!-- Add project-specific env vars below -->
+
+### Database Schemas
+
+> Check here before creating a new schema to avoid duplicates.
+
+| Schema       | Collection   | Key Fields | Notes               |
+| ------------ | ------------ | ---------- | ------------------- | ----------------------------- | --- |
+| _(none yet)_ |              |            |                     |
+| <!--         | `UserSchema` | `Users`    | `userId`, `balance` | Extended with `modifyBalance` | --> |
+
+### Commands
+
+**Slash**
+
+| Command      | File | Category | Description |
+| ------------ | ---- | -------- | ----------- |
+| _(none yet)_ |      |          |             |
+
+**Prefix**
+
+| Command      | File | Description |
+| ------------ | ---- | ----------- |
+| _(none yet)_ |      |             |
+
+**Context Menu**
+
+| Command      | File | Type | Description |
+| ------------ | ---- | ---- | ----------- |
+| _(none yet)_ |      |      |             |
+
+### Events
+
+| Name         | File | Discord Event | Notes |
+| ------------ | ---- | ------------- | ----- |
+| _(none yet)_ |      |               |       |
+
+### Utilities
+
+> Check here before writing logic that might already exist.
+
+| Utility      | File | Description |
+| ------------ | ---- | ----------- |
+| _(none yet)_ |      |             |
+
+### Feature Classes
+
+| Class        | File | Used By | Description |
+| ------------ | ---- | ------- | ----------- |
+| _(none yet)_ |      |         |             |
+
+### Scheduled Jobs
+
+| Job          | File | Schedule | Description |
+| ------------ | ---- | -------- | ----------- |
+| _(none yet)_ |      |          |             |
+
+### Constants
+
+| Export       | Source File | Description |
+| ------------ | ----------- | ----------- |
+| _(none yet)_ |             |             |
+
+---
+
+## Project-Specific Notes
+
+> **Agent instruction:** Document any pattern, convention, or architectural decision unique to this project that isn't covered by the Vimcord skill. If you make a non-obvious call, explain it here so future agents don't undo it.
+
+_(No project-specific notes yet. Add them as the project develops.)_
+
+<!-- Examples of what belongs here:
+- "All economy commands check for a blacklist via BlacklistSchema before executing — use the checkBlacklist() utility in @utils/blacklist."
+- "The /card command family routes through CardManager in @features/CardManager — do not query CardSchema directly from command files."
+- "Embeds use #5865F2 as primary and #ED4245 as error color — defined in constants/config.json."
+- "This bot operates in a single guild only. All commands use guildOnly: true and InteractionContextType.Guild."
+-->
+
+---
+
+## Quick Patterns
+
+Canonical shapes for the most common tasks. Use these exactly — don't improvise structure.
+
+### Slash Command
 
 ```typescript
 import { InteractionContextType } from "discord.js";
@@ -254,10 +377,10 @@ import { SlashCommandBuilder } from "vimcord";
 
 export default new SlashCommandBuilder({
     builder: builder =>
-        builder.setName("command-name").setDescription("Description here").setContexts(InteractionContextType.Guild),
+        builder.setName("command-name").setDescription("Description").setContexts(InteractionContextType.Guild),
 
     deferReply: true,
-    metadata: { category: "Category/Name" },
+    metadata: { category: "Category" },
 
     async execute(client, interaction): Promise<void> {
         await interaction.editReply("Response");
@@ -265,166 +388,60 @@ export default new SlashCommandBuilder({
 });
 ```
 
-### Creating a Staff Command
+### Event Handler
 
 ```typescript
-import { SlashCommandBuilder } from "vimcord";
+import { Events } from "discord.js";
+import { EventBuilder } from "vimcord";
 
-export default new SlashCommandBuilder({
-    builder: builder => builder.setName("admin").setDescription("Admin command (STAFF)"),
+export default new EventBuilder({
+    event: Events.MessageCreate,
+    name: "messageCreate.HandlerName",
+    conditions: [async m => !m.author.bot],
 
-    deferReply: true,
-    permissions: { guildOnly: true, botStaffOnly: true },
-    metadata: { category: "Staff" },
-
-    async execute(client, interaction): Promise<void> {
-        // Only bot staff can reach here
+    async execute(client, message): Promise<void> {
+        // logic
     }
 });
 ```
 
-### Creating a Command with Subcommand Routes
+### Schema
+
+```typescript
+import { createMongoSchema } from "vimcord";
+
+export interface IExample {
+    userId: string;
+    value: number;
+    createdAt: number;
+}
+
+export const ExampleSchema = createMongoSchema<IExample>("Examples", {
+    userId: { type: String, unique: true, required: true, index: true },
+    value: { type: Number, default: 0 },
+    createdAt: { type: Number, default: Date.now }
+});
+```
+
+### Subcommand Routing
 
 ```typescript
 import { SlashCommandBuilder } from "vimcord";
-import subAdd from "./subcommand/add";
-import subDelete from "./subcommand/delete";
+import handlerA from "./command/a";
+import handlerB from "./command/b";
 
 export default new SlashCommandBuilder({
     builder: builder =>
         builder
-            .setName("card")
-            .setDescription("Card management")
-            .addSubcommand(sub => sub.setName("add").setDescription("Add a card"))
-            .addSubcommand(sub => sub.setName("delete").setDescription("Delete a card")),
+            .setName("command")
+            .setDescription("...")
+            .addSubcommand(sub => sub.setName("a").setDescription("..."))
+            .addSubcommand(sub => sub.setName("b").setDescription("...")),
 
     deferReply: true,
     routes: [
-        { name: "add", handler: (client, interaction) => subAdd(interaction) },
-        { name: "delete", handler: (client, interaction) => subDelete(interaction) }
+        { name: "a", handler: (client, interaction) => handlerA(interaction) },
+        { name: "b", handler: (client, interaction) => handlerB(interaction) }
     ]
 });
 ```
-
-### Creating an Event Handler
-
-Key points: use `EventBuilder`, provide unique dot-namespaced `name`, implement `execute`.
-
-```typescript
-import { Events } from "discord.js";
-import { EventBuilder } from "vimcord";
-
-export default new EventBuilder({
-    event: Events.Ready,
-    name: "Ready.Hello",
-
-    async execute(client): Promise<void> {
-        console.log("Bot is ready!");
-    }
-});
-```
-
-### Creating an Environment-Specific Event
-
-```typescript
-import { Events } from "discord.js";
-import { EventBuilder } from "vimcord";
-
-export default new EventBuilder({
-    event: Events.PresenceUpdate,
-    name: "Presence.Vanity",
-    deployment: { environments: ["production"] }, // Only in production
-
-    async execute(client, oldPresence, newPresence): Promise<void> {
-        // Handle presence update
-    }
-});
-```
-
-### Client Setup Pattern
-
-```typescript
-// src/index.ts
-import {
-    createClient,
-    defineClientOptions,
-    defineVimcordFeatures,
-    defineGlobalToolsConfig,
-    MongoDatabase,
-    StatusType
-} from "vimcord";
-import { GatewayIntentBits, ActivityType } from "discord.js";
-import { initializeJobs } from "./jobs";
-
-// Global tools configuration
-defineGlobalToolsConfig({
-    embedColor: ["#5865F2", "#57F287"],
-    paginator: {
-        notAParticipantMessage: "These buttons aren't for you."
-    }
-});
-
-// Define client options
-const clientOptions = defineClientOptions({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
-});
-
-// Define features
-const vimcordFeatures = defineVimcordFeatures({
-    useGlobalErrorHandlers: true,
-    useDefaultSlashCommandHandler: true,
-    useDefaultPrefixCommandHandler: true,
-    importModules: {
-        events: "./events",
-        slashCommands: "./commands/slash",
-        prefixCommands: "./commands/prefix"
-    }
-});
-
-// Create client
-const client = createClient(clientOptions, vimcordFeatures);
-
-client.useEnv();
-client.useDatabase(new MongoDatabase(client));
-
-client
-    .configure("app", { name: "MyBot", verbose: false })
-    .configure("staff", {
-        ownerId: "BOT_OWNER_ID",
-        superUsers: ["STAFF_ID_1", "STAFF_ID_2"],
-        guild: { id: "STAFF_GUILD_ID" }
-    })
-    .configure("slashCommands", {
-        async beforeExecute(client, interaction) {
-            // Runs before every slash command
-        },
-        async afterExecute(result, client, interaction) {
-            // Runs after every slash command
-        }
-    });
-
-// Start with callback
-client.start(() => {
-    client.status.set({
-        production: { activity: { name: "Online", type: ActivityType.Playing } }
-    });
-    initializeJobs(client);
-});
-```
-
----
-
-## Additional Notes
-
-- The bot uses environment variables via `client.useEnv()` method
-- MongoDB connection configured in `src/db/` - use `client.useDatabase(new MongoDatabase(client))` before `client.start()`
-- Database schemas use `createMongoSchema<T>()` with TypeScript interfaces for type safety
-- Use `Schema.extend({ method1, method2 })` to add custom methods to schemas
-- Use `Schema.useTransaction(async session => { ... })` for atomic operations
-- Default command prefix is configurable via `.configure("prefixCommands", { defaultPrefix: "?" })`
-- Development mode is auto-detected from `NODE_ENV` or `--dev` flag
-- Staff permissions use `permissions: { botStaffOnly: true }` which checks `ownerId` and `superUsers`
-- Use the builder function pattern: `builder: builder => builder.setName(...)`
-- Always use `deferReply: true` for commands that may take longer than 3 seconds
-- Organize events by type in subdirectories: `interaction/`, `intervals/`, `presence/`, `state/`
-- Feature classes in `src/features/` encapsulate complex business logic shared across commands

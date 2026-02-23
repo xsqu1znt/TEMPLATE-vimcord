@@ -16,16 +16,16 @@ async function main() {
         await client.useDatabase(new MongoDatabase(client));
     }
 
-    client.status.set({
-        production: {
-            activity: { name: "Check out our server!", type: ActivityType.Streaming, status: StatusType.Online }
-        },
-        development: {
-            activity: { name: "Testing new features...", type: ActivityType.Custom, status: StatusType.DND }
-        }
+    await client.start(() => {
+        client.status.set({
+            production: {
+                activity: { name: "Check out our server!", type: ActivityType.Streaming, status: StatusType.Online }
+            },
+            development: {
+                activity: { name: "Testing new features...", type: ActivityType.Custom, status: StatusType.DND }
+            }
+        });
     });
-
-    await client.start();
 }
 
 main().catch(console.error);
