@@ -4,6 +4,19 @@
 
 ---
 
+setup: true
+
+---
+
+## Setup
+
+> **Agent instruction:** Check the `setup:` flag above before doing anything else.
+>
+> - `setup: true` — Stop. Read `.skills/setup-vimcord/SKILL.md` in full and follow it before any other work. Do not write source code until the planning phases are complete and approved. Set `setup: false` when done.
+> - `setup: false` — Ignore this section entirely and continue normally.
+
+---
+
 ## Agent Orientation
 
 This project is a Discord bot built with **TypeScript + Vimcord** (a discord.js v14 wrapper) and **MongoDB** via Mongoose.
@@ -143,17 +156,19 @@ When asked to build a new bot or a full feature set from a prompt:
 ```
 [PROJECT_NAME]/
 ├── .skills/
-│   └── vimcord/                # Vimcord framework reference (do not edit)
-│       ├── SKILL.md            # Start here — rules + reference map
-│       ├── commands.md
-│       ├── database.md
-│       ├── events.md
-│       ├── ui.md
-│       ├── client.md
-│       ├── jobs.md
-│       ├── features.md
-│       ├── migration.md
-│       └── scaffolding.md
+│   ├── vimcord/                # Vimcord framework reference (do not edit)
+│   │   ├── SKILL.md            # Start here — rules + reference map
+│   │   ├── commands.md
+│   │   ├── database.md
+│   │   ├── events.md
+│   │   ├── ui.md
+│   │   ├── client.md
+│   │   ├── jobs.md
+│   │   ├── features.md
+│   │   ├── migration.md
+│   │   └── scaffolding.md
+│   └── setup-vimcord/          # Project initialization skill (do not edit)
+│       └── SKILL.md            # Read when setup: true
 ├── constants/                  # JSON config — hot reloads without rebuild
 │   └── config.json
 ├── src/
