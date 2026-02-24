@@ -13,10 +13,13 @@ MongoDB via Mongoose, abstracted by Vimcord's `createMongoSchema`.
 5. [Indexes](#indexes)
 6. [extend() — Custom Methods](#extend--custom-methods)
 7. [Transactions](#transactions)
-8. [execute() — Raw Model Access](#execute--raw-model-access)
-9. [Utility Methods](#utility-methods)
-10. [Full Schema Example](#full-schema-example)
-11. [Barrel Export Pattern](#barrel-export-pattern)
+8. [Plugins](#plugins)
+9. [execute() — Raw Model Access](#execute--raw-model-access)
+10. [Bulk Operations](#bulk-operations)
+11. [Utility Methods](#utility-methods)
+12. [MongoDatabase — Connection Helpers](#mongodatabase--connection-helpers)
+13. [Full Schema Example](#full-schema-example)
+14. [Barrel Export Pattern](#barrel-export-pattern)
 
 ---
 
@@ -37,14 +40,14 @@ export interface IUser {
 }
 
 export const UserSchema = createMongoSchema<IUser>("Users", {
-    userId: { type: String, unique: true, required: true, index: true },
-    username: { type: String, required: true },
-    balance: { type: Number, default: 0 },
-    experience: { type: Number, default: 0, index: true },
-    isPremium: { type: Boolean, default: false },
+    userId:          { type: String,   unique: true, required: true, index: true },
+    username:        { type: String,   required: true },
+    balance:         { type: Number,   default: 0 },
+    experience:      { type: Number,   default: 0, index: true },
+    isPremium:       { type: Boolean,  default: false },
     favoriteCardIds: { type: [String], default: [] },
-    lastActive: { type: Date, default: () => new Date() },
-    createdAt: { type: Number, default: Date.now }
+    lastActive:      { type: Date,     default: () => new Date() },
+    createdAt:       { type: Number,   default: Date.now }
 });
 ```
 
@@ -106,6 +109,9 @@ const users = await UserSchema.fetchAll({}, null, { lean: true });
 // Check existence
 const exists = await UserSchema.exists({ userId: "123" });
 
+// Count documents
+const count = await UserSchema.count({ isPremium: true });
+
 // Distinct values
 const groups = await CardSchema.distinct("group", { released: true });
 ```
@@ -124,6 +130,16 @@ const updated = await UserSchema.update({ userId: "123" }, { $inc: { balance: 50
 
 // All matching
 await CardSchema.updateAll({ released: false }, { $set: { released: true } });
+```
+
+### Upsert (dedicated method)
+
+```typescript
+// Directly upsert a document (always creates if not found, returns the result)
+const doc = await UserSchema.upsert(
+    { userId: "123" },
+    { $set: { username: "Alice" }, $setOnInsert: { createdAt: Date.now() } }
+);
 ```
 
 ### Delete
@@ -190,8 +206,8 @@ Add reusable business logic directly to the schema:
 
 ```typescript
 export const UserSchema = createMongoSchema<IUser>("Users", {
-    userId: { type: String, unique: true, required: true },
-    balance: { type: Number, default: 0 },
+    userId:     { type: String, unique: true, required: true },
+    balance:    { type: Number, default: 0 },
     experience: { type: Number, default: 0 }
 }).extend({ modifyBalance, addExperience, getLeaderboard });
 
@@ -224,8 +240,8 @@ For atomic operations across multiple documents or schemas:
 ```typescript
 // Automatic session management — session commits on success, rolls back on error
 await UserSchema.useTransaction(async session => {
-    await UserSchema.update({ userId: senderId }, { $inc: { balance: -amount } }, { session });
-    await UserSchema.update({ userId: recipientId }, { $inc: { balance: amount } }, { session });
+    await UserSchema.update({ userId: senderId },    { $inc: { balance: -amount } }, { session });
+    await UserSchema.update({ userId: recipientId }, { $inc: { balance: amount } },  { session });
     await TradeLogSchema.create([{ senderId, recipientId, amount }], { session });
 });
 ```
@@ -234,12 +250,73 @@ Any schema can call `useTransaction` — the session is shared across all schema
 
 ---
 
+## Plugins
+
+Plugins extend schemas with reusable behaviors. They can add fields, custom methods, or middleware.
+
+### Defining a Plugin
+
+```typescript
+import { createMongoPlugin } from "vimcord";
+
+// A soft-delete plugin
+export const SoftDeletePlugin = createMongoPlugin(builder => {
+    // Add a field to the schema
+    builder.schema.add({ deletedAt: { type: Date, default: null } });
+
+    // Add a custom method via extend()
+    builder.extend({
+        async softDelete(filter: any) {
+            return this.update(filter, { deletedAt: new Date() } as any);
+        },
+        async restore(filter: any) {
+            return this.update(filter, { deletedAt: null } as any);
+        }
+    });
+
+    // Add middleware (only return non-deleted docs by default)
+    builder.schema.pre(/^find/, function () {
+        this.where({ deletedAt: null });
+    });
+});
+```
+
+### Plugin with Options
+
+```typescript
+export const AuthorizablePlugin = (roleField: string) => {
+    return createMongoPlugin(builder => {
+        builder.extend({
+            async findByRole(role: string) {
+                return this.fetchAll({ [roleField]: role } as any);
+            }
+        });
+    });
+};
+```
+
+### Registering Plugins
+
+```typescript
+import { MongoSchemaBuilder } from "vimcord";
+
+// Global — applies to all future schemas
+MongoSchemaBuilder.use(SoftDeletePlugin);
+MongoSchemaBuilder.use(AuthorizablePlugin("role"));
+
+// Per schema only
+const UserSchema = createMongoSchema("Users", { ... });
+UserSchema.use(SoftDeletePlugin);
+```
+
+---
+
 ## execute() — Raw Model Access
 
 For operations not covered by built-in methods:
 
 ```typescript
-// Bulk write
+// Access raw Mongoose Model
 await UserSchema.execute(async model => {
     await model.bulkWrite(
         userIds.map(userId => ({
@@ -251,19 +328,36 @@ await UserSchema.execute(async model => {
         }))
     );
 });
+```
 
-// Complex update
-await AlbumCardSchema.execute(async model => {
-    await model.bulkWrite(
-        cards.map(card => ({
-            updateOne: {
-                filter: { userId, cardId: card.cardId },
-                update: { $addToSet: { prints: { $each: card.prints } } },
-                upsert: true
-            }
-        }))
-    );
-});
+---
+
+## Bulk Operations
+
+### bulkWrite()
+
+```typescript
+// Run MongoDB bulk write operations directly
+await AlbumCardSchema.bulkWrite(
+    cards.map(card => ({
+        updateOne: {
+            filter: { userId, cardId: card.cardId },
+            update: { $addToSet: { prints: { $each: card.prints } } },
+            upsert: true
+        }
+    }))
+);
+```
+
+### bulkSave()
+
+```typescript
+// Save an array of hydrated documents atomically
+const docs = await UserSchema.fetchAll({ isPremium: true }, null, { lean: false });
+for (const doc of docs) {
+    doc.balance += 100;
+}
+await UserSchema.bulkSave(docs);
 ```
 
 ---
@@ -271,8 +365,44 @@ await AlbumCardSchema.execute(async model => {
 ## Utility Methods
 
 ```typescript
-// Generate a unique hex ID (length, fieldName)
+// Generate a unique hex ID (byte count, field name to check uniqueness against)
 const txId = await TransactionSchema.createHexId(12, "transactionId");
+
+// Start a session manually
+const session = await UserSchema.startSession();
+try {
+    session.startTransaction();
+    await UserSchema.update({ userId: "123" }, { $inc: { balance: 50 } }, { session });
+    await session.commitTransaction();
+} catch (err) {
+    await session.abortTransaction();
+} finally {
+    session.endSession();
+}
+```
+
+---
+
+## MongoDatabase — Connection Helpers
+
+```typescript
+import { MongoDatabase } from "vimcord";
+
+// Get the existing MongoDatabase instance (returns undefined if not yet created)
+const db = MongoDatabase.getInstance();
+const db = MongoDatabase.getInstance(0); // clientId defaults to 0
+
+// Wait for a ready instance (waits for connection, throws on timeout)
+const db = await MongoDatabase.getReadyInstance(0, 60_000);
+
+// Start a session from anywhere (static convenience)
+const session = await MongoDatabase.startSession();
+
+// On the instance
+await db.waitForReady();        // Wait until connected
+console.log(db.isReady);        // boolean
+console.log(db.connection);     // Mongoose Connection object
+await db.disconnect();          // Close the connection
 ```
 
 ---
@@ -281,7 +411,7 @@ const txId = await TransactionSchema.createHexId(12, "transactionId");
 
 ```typescript
 import { createMongoSchema } from "vimcord";
-import { PipelineStage, FilterQuery, ProjectionFields } from "mongoose";
+import { PipelineStage } from "mongoose";
 
 export interface ICard {
     cardId: string;
@@ -295,14 +425,14 @@ export interface ICard {
 }
 
 export const CardSchema = createMongoSchema<ICard>("Cards", {
-    cardId: { type: String, unique: true, required: true },
-    name: { type: String, required: true, index: true },
-    group: { type: String, required: true, index: true },
-    rarity: { type: Number, default: null, index: true },
-    type: { type: Number, required: true, index: true },
-    imageUrl: { type: String, required: true },
-    released: { type: Boolean, default: false, index: true },
-    createdAt: { type: Number, default: Date.now }
+    cardId:    { type: String,  unique: true, required: true },
+    name:      { type: String,  required: true, index: true },
+    group:     { type: String,  required: true, index: true },
+    rarity:    { type: Number,  default: null, index: true },
+    type:      { type: Number,  required: true, index: true },
+    imageUrl:  { type: String,  required: true },
+    released:  { type: Boolean, default: false, index: true },
+    createdAt: { type: Number,  default: Date.now }
 }).extend({ sampleRandom });
 
 // Compound index

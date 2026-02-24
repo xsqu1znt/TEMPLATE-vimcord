@@ -14,6 +14,7 @@ Covers slash commands, prefix commands, context menu commands, routing, permissi
 6. [Deployment Options](#deployment-options)
 7. [Lifecycle Hooks](#lifecycle-hooks)
 8. [Subcommand Routing](#subcommand-routing)
+9. [CommandManager API](#commandmanager-api)
 
 ---
 
@@ -38,6 +39,7 @@ export default new SlashCommandBuilder({
             ),
 
     deferReply: true,                        // Use { ephemeral: true } for ephemeral defer
+    logExecution: true,                      // false = suppress execution logs for this command
     metadata: { category: "Category/Name" }, // Used by help commands
 
     async execute(client, interaction): Promise<void> {
@@ -165,10 +167,15 @@ export default new SlashCommandBuilder({
     permissions: { guildOnly: true },
 
     routes: [
-        { name: "view", handler: (client, interaction) => settingsView(interaction) },
-        { name: "set", handler: (client, interaction) => settingsSet(interaction) },
+        { name: "view",  handler: (client, interaction) => settingsView(interaction) },
+        { name: "set",   handler: (client, interaction) => settingsSet(interaction) },
         { name: "reset", handler: (client, interaction) => settingsReset(interaction) }
-    ]
+    ],
+
+    // Optional: handle unknown subcommand names (e.g. if routes list is incomplete)
+    onUnknownRouteHandler: async (client, interaction): Promise<void> => {
+        await interaction.editReply("Unknown subcommand.");
+    }
 });
 
 // commands/slash/settings/view.ts
@@ -200,7 +207,8 @@ export default new PrefixCommandBuilder({
 
     permissions: { guildOnly: true },
 
-    async execute(client, message, args): Promise<void> {
+    async execute(client, message): Promise<void> {
+        const args = message.content.split(" ").slice(1);
         const topic = args[0]?.toLowerCase();
         await message.reply(topic ? `Help for: ${topic}` : "Use !help <topic>");
     }
@@ -210,6 +218,14 @@ export default new PrefixCommandBuilder({
 ---
 
 ## Context Menu Commands
+
+```ts
+// ApplicationCommandType.Message is used when a context command should be used on a message for per-message based context
+.setType(ApplicationCommandType.Message)
+
+// ApplicationCommandType.User is used when a context command should be used on a user for per-user based context
+.setType(ApplicationCommandType.User)
+```
 
 ```typescript
 import { ApplicationCommandType, InteractionContextType } from "discord.js";
@@ -244,7 +260,7 @@ permissions: {
     user: [PermissionFlagsBits.ManageMessages, PermissionFlagsBits.KickMembers],
     bot: [PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks],
 
-    // Role-based (user must have ANY of these)
+    // Role-based (user must have ANY of these roles)
     roles: ["ROLE_ID_1", "ROLE_ID_2"],
     roleBlacklist: ["BANNED_ROLE_ID"],
 
@@ -256,7 +272,7 @@ permissions: {
     guildOnly: true,          // No DMs
     guildOwnerOnly: false,    // Only server owner
     botOwnerOnly: false,      // Only bot ownerId
-    botStaffOnly: false       // ownerId + superUsers
+    botStaffOnly: false       // ownerId + superUsers + superUserRoles
 }
 ```
 
@@ -298,7 +314,7 @@ new SlashCommandBuilder({
     deployment: {
         global: true,                      // Deploy to all guilds
         guilds: ["GUILD_ID_1"],            // Or specific guilds only
-        environments: ["production"]       // "production" | "development"
+        environments: ["production"]       // "production" | "development" — skip in other envs
     }
 });
 ```
@@ -307,9 +323,14 @@ new SlashCommandBuilder({
 
 ## Lifecycle Hooks
 
+All hooks are available on every command type (slash, prefix, context):
+
 ```typescript
 new SlashCommandBuilder({
     builder: {...},
+
+    enabled: true,           // Set false to disable without deleting the file
+    logExecution: true,      // Set false to suppress execution log for this command
 
     beforeExecute: async (client, interaction): Promise<void> => {
         // Runs before execute — good for logging, analytics
@@ -320,7 +341,22 @@ new SlashCommandBuilder({
     },
 
     afterExecute: async (result, client, interaction): Promise<void> => {
-        // Runs after execute — good for cleanup
+        // Runs after execute — result is the return value of execute()
+    },
+
+    onMissingPermissions: async (results, client, interaction): Promise<void> => {
+        // results.failReason, results.missingUserPermissions, etc.
+        await interaction.reply({ content: "You lack the required permissions.", flags: "Ephemeral" });
+    },
+
+    onConditionsNotMet: async (client, interaction): Promise<void> => {
+        // Fires when any condition() returns false
+        await interaction.reply({ content: "Requirements not met.", flags: "Ephemeral" });
+    },
+
+    onUsedWhenDisabled: async (client, interaction): Promise<void> => {
+        // Fires when enabled: false and the command is still invoked
+        await interaction.reply({ content: "This command is currently disabled.", flags: "Ephemeral" });
     },
 
     onError: async (error, client, interaction): Promise<void> => {
@@ -330,3 +366,51 @@ new SlashCommandBuilder({
     }
 });
 ```
+
+---
+
+## CommandManager API
+
+Access and deploy commands via `client.commands`:
+
+```typescript
+// Sub-managers
+client.commands.slash;    // SlashCommandManager
+client.commands.prefix;   // PrefixCommandManager
+client.commands.context;  // ContextCommandManager
+
+// Get a specific command by name
+const cmd = client.commands.slash.get("ping");
+
+// Get all slash commands (alphabetical), optionally filtered
+const all = client.commands.slash.getAll();
+const staffOnly = client.commands.slash.getAll({ fuzzyNames: ["admin", "staff"] });
+
+// Group commands by category
+const categories = client.commands.slash.sortByCategory();
+// categories[0].name, categories[0].emoji, categories[0].commands
+
+// Get all app commands (slash + context combined)
+const appCmds = client.commands.getAllAppCommands();
+
+// Deploy to Discord
+await client.commands.registerGlobal();          // All app commands globally
+await client.commands.registerGlobal({ names: ["ping", "help"] }); // Filtered
+
+await client.commands.registerGuild();           // Uses deployment.guilds from each command
+await client.commands.registerGuild({ guilds: ["GUILD_ID"] }); // Force specific guilds
+
+await client.commands.unregisterGlobal();        // Remove all global registrations
+await client.commands.unregisterGuild({ guilds: ["GUILD_ID"] });
+```
+
+**CommandFilter options** (for `getAll`, `registerGlobal`, `registerGuild`):
+```typescript
+{
+    names: ["ping"],               // Exact name match
+    fuzzyNames: ["admin"],         // Partial name match
+    globalOnly: true,              // Only commands with deployment.global = true
+    ignoreDeploymentOptions: true  // Ignore deployment config, include all
+}
+```
+

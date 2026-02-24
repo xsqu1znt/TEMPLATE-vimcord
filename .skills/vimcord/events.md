@@ -9,32 +9,62 @@ import { Events } from "discord.js";
 import { EventBuilder } from "vimcord";
 
 export default new EventBuilder({
-    event: Events.MessageCreate,   // discord.js Events enum value
-    name: "messageCreate.AutoMod", // Unique dot-namespaced name: "category.Name"
-    enabled: true,                 // Can disable without deleting
-    once: false,                   // true = only fires once (use for ready events)
-    priority: 0,                   // Higher = runs first when multiple handlers share an event
+    event: Events.MessageCreate,    // discord.js Events enum value
+    name: "messageCreate.AutoMod",  // Unique dot-namespaced name: "category.Name"
+    enabled: true,                  // Can disable without deleting
+    once: false,                    // true = only fires once (use for ready events)
+    priority: 0,                    // Higher = runs first when multiple handlers share an event
 
     // Conditions — ALL must return true for execute to run
     conditions: [
-        async message => !message.author.bot,
-        async message => message.guild !== null
+        async (client, message) => !message.author.bot,
+        async (client, message) => message.guild !== null
     ],
 
     // Rate limiting per event
     rateLimit: {
         max: 5,
-        interval: 10_000
+        interval: 10_000,
+        onRateLimit: async (client, message) => {
+            // Optional: respond when rate limited
+        }
+    },
+
+    // Deployment environment restriction
+    deployment: {
+        environments: ["production"] // "production" | "development"
+    },
+
+    beforeExecute: async (client, message): Promise<void> => {
+        // Runs before execute
     },
 
     async execute(client, message): Promise<void> {
         // Event logic
     },
 
+    afterExecute: async (result, client, message): Promise<void> => {
+        // Runs after execute — result is the return value of execute()
+    },
+
     onError: async (error, client, message): Promise<void> => {
         console.error("Event error:", error);
     }
 });
+```
+
+### Static Factory
+
+```typescript
+// EventBuilder.create() is equivalent to new EventBuilder({ event, name })
+const handler = EventBuilder.create(Events.MessageCreate, "messageCreate.Logger")
+    .setExecute(async (client, message) => {
+        // logic
+    })
+    .setEnabled(true);
+
+// Clone an existing handler (same config, new UUID)
+const handler2 = handler.clone();
 ```
 
 ---
@@ -77,10 +107,8 @@ export default new EventBuilder({
 ### Guild Member Join
 
 ```typescript
-import { Events } from "discord.js";
-import { BetterEmbed, EventBuilder } from "vimcord";
-import { fetchChannel } from "vimcord";
-import { ChannelType } from "discord.js";
+import { Events, ChannelType } from "discord.js";
+import { BetterEmbed, EventBuilder, fetchChannel } from "vimcord";
 import { CONFIG } from "@/constants";
 
 export default new EventBuilder({
@@ -93,7 +121,7 @@ export default new EventBuilder({
         if (!channel) return;
 
         const embed = new BetterEmbed({
-            context: { member },
+            context: { user: member },
             title: "Welcome, $USER!",
             description: "We're glad you're here.",
             color: "#57F287"
@@ -115,8 +143,8 @@ export default new EventBuilder({
     name: "interactionCreate.ShopButtons",
 
     conditions: [
-        async i => i.isButton(),
-        async i => i.isButton() && i.customId.startsWith("shop:")
+        async (client, i) => i.isButton(),
+        async (client, i) => i.isButton() && i.customId.startsWith("shop:")
     ],
 
     async execute(client, interaction): Promise<void> {
@@ -158,6 +186,38 @@ new EventBuilder({ event: Events.GuildMemberAdd, name: "guildMemberAdd.Welcome",
 
 // Runs last — assign default role
 new EventBuilder({ event: Events.GuildMemberAdd, name: "guildMemberAdd.RoleAssign", priority: 0, ... });
+```
+
+---
+
+## EventManager API
+
+Manage event handlers at runtime via `client.events`:
+
+```typescript
+import { EventBuilder } from "vimcord";
+
+// Register one or more events at runtime
+client.events.register(handler1, handler2);
+
+// Unregister by name
+client.events.unregister("messageCreate.AutoMod", "ready.Hello");
+
+// Remove all registered events
+client.events.clear();
+
+// Get by name
+const handler = client.events.get("messageCreate.AutoMod");
+
+// Filter by metadata
+const modHandlers = client.events.getByCategory("moderation");
+const logHandlers = client.events.getByTag("logging");
+
+// Get all handlers for a specific Discord event type
+const messageHandlers = client.events.getByEvent(Events.MessageCreate);
+
+// Manually trigger all handlers for an event (advanced use)
+await client.events.executeEvents(Events.MessageCreate, message);
 ```
 
 ---
