@@ -8,13 +8,11 @@
 
             "export interface I${1:${TM_FILENAME_BASE/(.*)\\.schema/${1:/capitalize}/}} {",
             "    ${3:// types}",
-            "    createdAt: Date;",
             "}\n",
 
             "export const ${1}Schema = createMongoSchema<I${1}>(\"${2:${1}s}\", {",
             "    ${0:// schema}",
-            "    createdAt: { type: Date, default: () => new Date() }",
-            "});"
+            "}, { timestamps: true });"
         ]
     },
 
@@ -28,14 +26,12 @@
             "export interface I${1:${TM_FILENAME_BASE/(.*)\\.schema/${1:/capitalize}/}} {",
             "    ${3:// types}",
             "    sampleId: string;",
-            "    createdAt: Date;",
             "}\n",
 
             "export const ${1}Schema = createMongoSchema<I${1}>(\"${2:${1}s}\", {",
             "    ${4:// schema}",
             "    sampleId: { type: String, unique: true, required: true },",
-            "    createdAt: { type: Date, default: () => new Date() }",
-            "}).extend({",
+            "}, { timestamps: true }).extend({",
             "    ${0:// custom functions}",
             "    async getById(id: string) {",
             "        return await this.fetch({ sampleId: id });",
