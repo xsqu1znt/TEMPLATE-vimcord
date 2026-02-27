@@ -2,7 +2,7 @@
     "Event": {
         "scope": "typescript",
         "prefix": "vEvent",
-        "description": "An event template for Vimcord",
+        "description": "An event template for Vimcord.",
         "body": [
             "import { EventBuilder } from \"vimcord\";",
             "",

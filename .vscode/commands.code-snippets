@@ -2,7 +2,7 @@
     "Prefix Command": {
         "scope": "typescript",
         "prefix": "vPrefixCommand",
-        "description": "A prefix command template for Vimcord",
+        "description": "A prefix command template for Vimcord.",
         "body": [
             "import { PrefixCommandBuilder } from \"vimcord\";\n",
 
@@ -19,7 +19,7 @@
     "Slash Command": {
         "scope": "typescript",
         "prefix": "vSlashCommand",
-        "description": "A slash command template for Vimcord",
+        "description": "A slash command template for Vimcord.",
         "body": [
             "import { InteractionContextType } from \"discord.js\";",
             "import { SlashCommandBuilder } from \"vimcord\";\n",
@@ -39,7 +39,7 @@
     "Context Command": {
         "scope": "typescript",
         "prefix": "vContextCommand",
-        "description": "A context command template for Vimcord",
+        "description": "A context command template for Vimcord.",
         "body": [
             "import { ApplicationCommandType, InteractionContextType } from \"discord.js\";",
             "import { ContextCommandBuilder } from \"vimcord\";\n",
