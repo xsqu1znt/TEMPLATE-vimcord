@@ -12,7 +12,7 @@ async function main() {
         verbose: process.argv.includes("--verbose")
     });
 
-    if (process.env.MONGO_URI) {
+    if (client.$devMode ? process.env.MONGO_URI_DEV : process.env.MONGO_URI) {
         await client.useDatabase(new MongoDatabase(client));
     }
 
