@@ -7,7 +7,9 @@
     "private": true,
     "scripts": {
         "start": "node dist/index.js",
+        "start:verbose": "node dist/index.js --verbose",
         "dev": "nodemon --exec \"tsx src/index.ts --dev\" -w src -w config -e \"json ts\"",
+        "dev:verbose": "nodemon --exec \"tsx src/index.ts --dev --verbose\" -w src -w config -e \"json ts\"",
         "build": "tsc && tsc-alias",
         "check": "tsc --noEmit",
         "format": "prettier --write \"./**/*.{ts,json}\""
