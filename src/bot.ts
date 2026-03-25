@@ -37,7 +37,7 @@ export function createBot(): Vimcord {
 
     // Configure the prefix commands
     bot.configure("prefixCommands", {
-        defaultPrefix: bot.$devMode ? "!" : "?",
+        defaultPrefix: bot.$devMode ? "?" : "!",
         async guildPrefixResolver(client, guildId) {
             const guildData = await GuildSchema.fetch({ guildId }, { _id: 0, prefix: 1 });
             return guildData?.prefix;
